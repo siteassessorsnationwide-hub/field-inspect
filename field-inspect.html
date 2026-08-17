@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Inspect</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#1B2430;
+    --ink-2:#232F40;
+    --ink-3:#28364A;
+    --paper:#EDEADF;
+    --paper-2:#E4E0D2;
+    --paper-line:#C9C3AE;
+    --text:#26241D;
+    --text-dim:#6B6656;
+    --tape:#E8A93B;
+    --tape-dark:#B8801F;
+    --good:#4C7A63;
+    --fair:#C98A3B;
+    --poor:#B84C3E;
+    --na:#8A8577;
+    --white:#FBFAF6;
+    --radius:3px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:'IBM Plex Sans',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  h1,h2,h3,.display{
+    font-family:'Archivo Expanded',sans-serif;
+    letter-spacing:0.01em;
+  }
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  /* ================= CALENDAR VIEW ================= */
+  #calendarView{
+    min-height:100vh;
+    padding:36px 20px 60px;
+  }
+  .cal-shell{max-width:640px; margin:0 auto;}
+  .cal-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--tape);
+    margin:0 0 6px;
+  }
+  #calendarView h1{
+    color:var(--white);
+    font-size:clamp(26px,5vw,36px);
+    margin:0 0 6px;
+    font-weight:800;
+  }
+  .cal-sub{
+    color:#9AA7B8;
+    font-size:13.5px;
+    margin:0 0 30px;
+  }
+  .cal-nav-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .cal-nav-row .cal-title{
+    color:var(--white);
+    font-size:18px;
+    font-weight:700;
+  }
+  .cal-nav-btns{display:flex; gap:8px;}
+  .cal-nav-btns button, .today-btn{
+    background:var(--ink-2);
+    border:1px solid #33455C;
+    color:var(--white);
+    width:34px; height:34px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:15px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .today-btn{width:auto; padding:0 12px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;}
+  .cal-nav-btns button:hover, .today-btn:hover{border-color:var(--tape);}
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:6px;
+  }
+  .cal-dow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#7C889C;
+    text-align:center;
+    padding-bottom:6px;
+  }
+  .cal-day{
+    aspect-ratio:1;
+    background:var(--ink-2);
+    border:1px solid #2E3B4E;
+    border-radius:var(--radius);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--white);
+    position:relative;
+  }
+  .cal-day.empty{visibility:hidden; cursor:default;}
+  .cal-day:hover{border-color:var(--tape);}
+  .cal-day .num{font-family:'IBM Plex Mono',monospace; font-size:14px;}
+  .cal-day.today{border-color:var(--tape); border-width:2px;}
+  .cal-day.has-data{background:var(--ink-3);}
+  .cal-day .dot{width:6px; height:6px; border-radius:50%; background:var(--tape); margin-top:4px;}
+  .cal-day .dot.poor{background:var(--poor);}
+  .cal-legend{
+    display:flex;
+    gap:18px;
+    margin-top:22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#9AA7B8;
+    flex-wrap:wrap;
+  }
+  .cal-legend span{display:flex; align-items:center; gap:6px;}
+  .cal-legend .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
+
+  .day-list{display:flex; flex-direction:column; gap:10px; margin:26px 0 22px;}
+  .day-card{
+    background:var(--ink-2);
+    border:1px solid #33455C;
+    border-left:4px solid var(--tape);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    cursor:pointer;
+    color:var(--white);
+  }
+  .day-card:hover{border-color:var(--tape);}
+  .day-card.has-poor{border-left-color:var(--poor);}
+  .day-card .dc-title{font-weight:700; font-size:15px;}
+  .day-card .dc-sub{font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9AA7B8; margin-top:5px;}
+  .day-empty{color:#9AA7B8; font-size:13px; font-style:italic; margin:26px 0 22px;}
+  .cal-day .badge{
+    position:absolute;
+    top:3px; right:3px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:8px;
+    background:var(--tape);
+    color:#1B2430;
+    border-radius:8px;
+    padding:1px 4px;
+    font-weight:700;
+  }
+
+  /* ================= APP (INSPECTOR) VIEW ================= */
+  .shell{
+    display:grid;
+    grid-template-columns:44px 1fr;
+    min-height:100vh;
+  }
+  @media (max-width:640px){
+    .shell{grid-template-columns:26px 1fr;}
+  }
+
+  .rail{
+    position:sticky;
+    top:0;
+    height:100vh;
+    background-color:var(--tape);
+    border-right:2px solid var(--tape-dark);
+    overflow:hidden;
+  }
+  .rail-inner{position:relative; height:100%; width:100%;}
+  .tick{position:absolute; left:0; width:100%; cursor:pointer; display:flex; align-items:center;}
+  .tick .mark{width:22px; height:3px; background:#3A2E10;}
+  @media (max-width:640px){ .tick .mark{width:16px;} }
+  .tick-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    color:#3A2E10;
+    margin-left:3px;
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    opacity:0.75;
+    display:none;
+    white-space:nowrap;
+  }
+  @media (min-width:641px){ .tick-num{display:block;} }
+  .tick.active .mark{background:#1B2430; width:26px; height:4px;}
+  @media (max-width:640px){ .tick.active .mark{width:18px;} }
+  .tick.active .tick-num{opacity:1; font-weight:600;}
+
+  header{
+    background:var(--ink);
+    color:var(--white);
+    padding:22px 24px 22px;
+    border-bottom:3px solid var(--tape);
+  }
+  .back-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .back-link{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--tape);
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .date-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:#B8C2D0;
+    border:1px solid #33455C;
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--tape);
+    margin:0 0 6px;
+  }
+  header h1{
+    font-size:clamp(26px,5vw,38px);
+    margin:0 0 18px;
+    font-weight:800;
+    color:var(--white);
+  }
+  .meta-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:12px;
+    max-width:700px;
+  }
+  .meta-field label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#9AA7B8;
+    margin-bottom:4px;
+  }
+  .meta-field input{
+    width:100%;
+    background:var(--ink-2);
+    border:1px solid #33455C;
+    color:var(--white);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14px;
+    padding:8px 10px;
+    border-radius:var(--radius);
+  }
+  .meta-field input:focus{outline:2px solid var(--tape); outline-offset:1px;}
+
+  .status-bar{display:flex; gap:22px; margin-top:18px; flex-wrap:wrap;}
+  .stat{font-family:'IBM Plex Mono',monospace; font-size:12px; color:#B8C2D0;}
+  .stat b{color:var(--white); font-size:16px; display:block; font-family:'Archivo Expanded',sans-serif;}
+  .stat.poor b{color:#E28A79;}
+  .stat.good b{color:#8FBBA3;}
+
+  main{background:var(--paper); padding:0;}
+  .section{
+    padding:40px 24px 8px;
+    max-width:960px;
+    margin:0 auto;
+    scroll-margin-top:8px;
+  }
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    border-bottom:2px solid var(--text);
+    padding-bottom:10px;
+    margin-bottom:18px;
+  }
+  .section-head .num{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-dim);}
+  .section-head h2{font-size:22px; margin:0; font-weight:700;}
+  .section-count{margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);}
+
+  .item{
+    background:var(--white);
+    border:1px solid var(--paper-line);
+    border-left:4px solid var(--na);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:10px;
+    transition:border-color .15s ease;
+  }
+  .item.good{border-left-color:var(--good);}
+  .item.fair{border-left-color:var(--fair);}
+  .item.poor{border-left-color:var(--poor);}
+
+  .item-top{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .item-name{font-weight:600; font-size:14.5px; flex:1; min-width:140px;}
+  .pills{display:flex; gap:6px; flex-wrap:wrap;}
+  .pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.02em;
+    padding:5px 10px;
+    border-radius:20px;
+    border:1px solid var(--paper-line);
+    background:var(--paper);
+    color:var(--text-dim);
+    cursor:pointer;
+    user-select:none;
+  }
+  .pill:hover{border-color:var(--text-dim);}
+  .pill.sel-good.on{background:var(--good); color:#fff; border-color:var(--good);}
+  .pill.sel-fair.on{background:var(--fair); color:#fff; border-color:var(--fair);}
+  .pill.sel-poor.on{background:var(--poor); color:#fff; border-color:var(--poor);}
+  .pill.sel-na.on{background:var(--na); color:#fff; border-color:var(--na);}
+
+  .field-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin:0 0 5px;
+    display:block;
+  }
+
+  .general-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
+  .gi-field input{
+    width:100%;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px;
+    padding:8px 10px;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    background:var(--paper);
+    color:var(--text);
+  }
+
+  .type-field{margin-top:12px;}
+  .type-chips{display:flex; gap:6px; flex-wrap:wrap;}
+  .type-chip{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:12.5px;
+    font-weight:500;
+    padding:6px 12px;
+    border-radius:var(--radius);
+    border:1px solid var(--paper-line);
+    background:var(--paper);
+    color:#ADA898;
+    cursor:pointer;
+    user-select:none;
+  }
+  .type-chip:hover{border-color:var(--text); background:var(--paper-2);}
+  .type-chip.selected{
+    background:var(--white);
+    color:var(--poor);
+    border-color:var(--poor);
+    font-weight:700;
+  }
+  .type-custom-row{display:flex; gap:8px; align-items:center; margin-top:8px;}
+  .type-custom-row input{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px;
+    padding:7px 10px;
+    border:1px solid var(--poor);
+    border-radius:var(--radius);
+    background:var(--white);
+    color:var(--poor);
+    font-weight:600;
+    flex:1;
+    max-width:260px;
+  }
+
+  .item-detail{margin-top:10px;}
+  .item-detail textarea{
+    width:100%;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px;
+    padding:8px 10px;
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    background:var(--paper);
+    color:var(--text);
+    resize:vertical;
+    min-height:34px;
+  }
+  .item-bottom-row{margin-top:12px; display:flex; justify-content:flex-end;}
+  .photo-btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    padding:8px 10px;
+    border:1px dashed var(--paper-line);
+    border-radius:var(--radius);
+    background:transparent;
+    color:var(--text-dim);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .photo-btn:hover{border-color:var(--text-dim); color:var(--text);}
+  .thumbs{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .thumbs img{width:52px; height:52px; object-fit:cover; border-radius:var(--radius); border:1px solid var(--paper-line);}
+
+  .add-row{display:flex; gap:8px; margin-top:14px; margin-bottom:30px;}
+  .add-row input{flex:1; padding:9px 12px; border:1px solid var(--paper-line); border-radius:var(--radius); font-size:13px; background:var(--white);}
+  .add-row button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:9px 16px;
+    background:var(--ink);
+    color:var(--white);
+    border:none;
+    border-radius:var(--radius);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .add-row button:hover{background:var(--ink-2);}
+
+  #addSectionBlock{
+    max-width:960px;
+    margin:10px auto 0;
+    padding:24px;
+    border:2px dashed var(--paper-line);
+    border-radius:var(--radius);
+    text-align:center;
+  }
+  #addSectionBlock p{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--text-dim);
+    margin:0 0 12px;
+  }
+  #addSectionBlock .add-row{margin:0; max-width:460px; margin:0 auto;}
+
+  #summary{background:var(--ink); color:var(--white); padding:48px 24px 70px; margin-top:40px;}
+  #summary .inner{max-width:960px; margin:0 auto;}
+  #summary h2{color:var(--white); font-size:24px; margin-bottom:4px;}
+  #summary .sub{color:#9AA7B8; font-family:'IBM Plex Mono',monospace; font-size:12px; margin-bottom:26px;}
+  .flag{background:var(--ink-2); border-left:4px solid var(--poor); border-radius:var(--radius); padding:12px 16px; margin-bottom:10px;}
+  .flag.fair{border-left-color:var(--fair);}
+  .flag .flag-section{font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9AA7B8; text-transform:uppercase; letter-spacing:0.06em;}
+  .flag .flag-name{font-weight:600; margin:4px 0 2px;}
+  .flag .flag-type{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#E8A93B; margin-bottom:4px;}
+  .flag .flag-note{font-size:13px; color:#C7CEDA;}
+  .empty-flags{color:#9AA7B8; font-size:13px; font-style:italic;}
+
+  .print-btn{
+    margin-top:28px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    padding:12px 22px;
+    background:var(--tape);
+    color:#1B2430;
+    border:none;
+    border-radius:var(--radius);
+    font-weight:600;
+    cursor:pointer;
+  }
+  .print-btn:hover{background:#f0b64d;}
+  .email-btn{background:var(--ink-2); color:var(--white); border:1px solid #33455C;}
+  .email-btn:hover{background:#2C3B4F;}
+  .email-note{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#7C889C;
+    margin-top:12px;
+    max-width:520px;
+    line-height:1.5;
+  }
+  .save-btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    padding:5px 12px;
+    background:var(--ink-2);
+    color:var(--white);
+    border:1px solid #33455C;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  .save-btn:hover{border-color:var(--tape);}
+  .save-status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#8FBBA3;
+    opacity:0;
+    transition:opacity .2s ease;
+  }
+  .save-status.show{opacity:1;}
+
+  @media print{
+    #calendarView, .rail, header .status-bar, header .back-row, .add-row, .photo-btn, .print-btn, .email-note, .save-btn, .save-status, .pills, #addSectionBlock{display:none !important;}
+    body{background:#fff;}
+    main{background:#fff;}
+    .item{break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= CALENDAR VIEW ================= -->
+<div id="calendarView">
+  <div class="cal-shell">
+    <p class="cal-eyebrow">Field Inspect · Commercial &amp; Environmental</p>
+    <h1>Inspections Calendar</h1>
+    <p class="cal-sub">Tap a date to open that day's inspection — or start a new one.</p>
+
+    <div class="cal-nav-row">
+      <button class="today-btn" onclick="calToday()">Today</button>
+      <div class="cal-title" id="calTitle"></div>
+      <div class="cal-nav-btns">
+        <button onclick="calPrev()">‹</button>
+        <button onclick="calNext()">›</button>
+      </div>
+    </div>
+
+    <div class="cal-grid" id="calGrid"></div>
+
+    <div class="cal-legend">
+      <span><span class="dot" style="background:var(--tape)"></span>Inspection on file</span>
+      <span><span class="dot" style="background:var(--poor)"></span>Has Poor items</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DAY VIEW (list of inspections for one date) ================= -->
+<div id="dayView" style="display:none">
+  <div class="cal-shell">
+    <span class="back-link" onclick="showView('calendar'); renderCalendar();">← Calendar</span>
+    <p class="cal-eyebrow" style="margin-top:14px;">Field Inspect · Commercial &amp; Environmental</p>
+    <h1 id="dayTitle"></h1>
+    <p class="cal-sub">Open an existing inspection below, or start a new one for this date.</p>
+    <div class="day-list" id="dayList"></div>
+    <button class="print-btn" onclick="createInspection()">+ New Inspection for This Date</button>
+  </div>
+</div>
+
+<!-- ================= INSPECTOR VIEW ================= -->
+<div class="shell" id="appView" style="display:none">
+  <nav class="rail" id="rail"><div class="rail-inner" id="railInner"></div></nav>
+
+  <div>
+    <header>
+      <div class="back-row">
+        <span class="back-link" onclick="backToDay()">← This Day's Inspections</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="save-status" id="saveStatus"></span>
+          <button class="save-btn" onclick="saveCurrentInspection()">Save</button>
+          <span class="date-pill" id="dateLabel"></span>
+        </div>
+      </div>
+      <p class="eyebrow">Field Inspect · Commercial &amp; Environmental</p>
+      <h1>Property Inspection</h1>
+      <div class="meta-grid">
+        <div class="meta-field"><label>Property address</label><input id="f-address" placeholder="123 Industrial Pkwy" oninput="setMeta('address',this.value)"></div>
+        <div class="meta-field"><label>Client</label><input id="f-client" placeholder="Client name" oninput="setMeta('client',this.value)"></div>
+        <div class="meta-field"><label>Inspector</label><input id="f-inspector" placeholder="Your name" oninput="setMeta('inspector',this.value)"></div>
+      </div>
+      <div class="status-bar">
+        <div class="stat">Complete<b id="stat-complete">0%</b></div>
+        <div class="stat good">Good<b id="stat-good">0</b></div>
+        <div class="stat" style="color:#E0C085"><span>Fair</span><b id="stat-fair" style="color:#E0C085">0</b></div>
+        <div class="stat poor">Poor<b id="stat-poor">0</b></div>
+      </div>
+    </header>
+
+    <main id="main"></main>
+
+    <div id="addSectionBlock">
+      <p>Need another section?</p>
+      <div class="add-row">
+        <input type="text" id="newSectionInput" placeholder="e.g. Stormwater Management, Signage, Loading Dock…">
+        <button onclick="addSection()">Add Section</button>
+      </div>
+    </div>
+
+    <section id="summary">
+      <div class="inner">
+        <h2>Summary of Findings</h2>
+        <p class="sub">Auto-generated from every item marked Fair or Poor below · updates as you inspect</p>
+        <div id="flagList"></div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="print-btn" id="pdfBtn" onclick="saveAsPDF()">Save as PDF</button>
+          <button class="print-btn email-btn" onclick="window.print()">Print (browser)</button>
+          <button class="print-btn email-btn" onclick="emailReport()">Email Report</button>
+        </div>
+        <p class="email-note">"Save as PDF" downloads a complete report file — property info, every logged item, and photos — straight to your phone or computer, ready to share or archive. Emailing sends a quick text summary; attach the saved PDF if you want the full report in the email.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const OTHER = 'Other';
+function item(name, typeOptions){
+  return {name, typeOptions: typeOptions||[], condition:null, types:[], typeCustom:'', note:'', photos:[]};
+}
+
+// Factory: returns a brand-new, independent set of sections each time it's called,
+// so every date's inspection has its own data.
+function buildDefaultSections(){
+  return [
+    { id:'site', name:'Site & Pavement', items:[
+      item('Parking lot pavement', ['Asphalt','Concrete','Permeable Pavers','Gravel',OTHER]),
+      item('Curbing & striping', ['Concrete','Painted','Thermoplastic',OTHER]),
+      item('Site drainage', ['Catch Basin','Swale','French Drain','Storm Sewer',OTHER]),
+      item('Retaining walls', ['CMU','Poured Concrete','Timber','Segmental Block',OTHER]),
+    ]},
+    { id:'envelope', name:'Building Envelope', items:[
+      item('Exterior wall cladding', ['EIFS','Brick Veneer','Metal Panel','Tilt-Up Concrete','Stucco','Wood',OTHER]),
+      item('Windows & glazing systems', ['Storefront','Curtain Wall','Punched Window',OTHER]),
+      item('Doors & entries', ['Aluminum Storefront','Hollow Metal','Overhead / Roll-Up','Wood',OTHER]),
+      item('Sealants & flashing', ['Silicone','Polyurethane','Metal',OTHER]),
+    ]},
+    { id:'roofing', name:'Roofing', items:[
+      item('Roof membrane', ['TPO','EPDM','PVC','Modified Bitumen','Built-Up','Metal',OTHER]),
+      item('Roof drains & scuppers', ['Interior Drain','Scupper','Gutter',OTHER]),
+      item('Flashing & penetrations', ['Metal','Membrane-Flashed',OTHER]),
+      item('Rooftop equipment curbs', ['Prefabricated','Built-Up',OTHER]),
+    ]},
+    { id:'structure', name:'Structure & Foundation', items:[
+      item('Foundation', ['Spread Footing','Slab-on-Grade','Pilings','Mat Foundation',OTHER]),
+      item('Structural framing', ['Steel','Precast Concrete','Wood','Masonry',OTHER]),
+      item('Slab / floor condition', ['Concrete','Composite Deck',OTHER]),
+    ]},
+    { id:'electrical', name:'Electrical', items:[
+      item('Main switchgear', ['120/208V','277/480V',OTHER]),
+      item('Panelboards', ['Square D','Eaton','Siemens','GE',OTHER]),
+      item('Emergency / backup power', ['Generator','UPS','Battery Backup','None',OTHER]),
+      item('Lighting systems', ['LED','Fluorescent','HID','Incandescent',OTHER]),
+    ]},
+    { id:'plumbing', name:'Plumbing', items:[
+      item('Domestic water supply', ['Copper','PEX','Galvanized','CPVC',OTHER]),
+      item('Sanitary & storm drainage', ['Cast Iron','PVC','Clay','ABS',OTHER]),
+      item('Water heater / boiler', ['Gas Water Heater','Electric Water Heater','Gas Boiler','Electric Boiler',OTHER]),
+      item('Backflow prevention', ['RPZ','Double Check','PVB','None',OTHER]),
+    ]},
+    { id:'hvac', name:'Mechanical / HVAC', items:[
+      item('Air handling units', ['Packaged','Split System',OTHER]),
+      item('Rooftop units (RTUs)', ['Gas/Electric','Heat Pump',OTHER]),
+      item('Ductwork & controls', ['BMS','Pneumatic','Standalone',OTHER]),
+      item('Exhaust / makeup air systems', ['Mechanical','Gravity',OTHER]),
+    ]},
+    { id:'firelife', name:'Fire & Life Safety', items:[
+      item('Fire sprinkler system', ['Wet','Dry','Pre-Action','None',OTHER]),
+      item('Fire alarm system', ['Monitored','Local Only','None',OTHER]),
+      item('Fire extinguishers', ['ABC','CO2','Water',OTHER]),
+      item('Emergency lighting & egress', ['Battery Pack','Generator-Fed',OTHER]),
+    ]},
+    { id:'environmental', name:'Environmental', items:[
+      item('Suspect asbestos-containing materials', ['Floor Tile','Pipe Insulation','Mastic','Ceiling Tile','None Observed',OTHER]),
+      item('Mold / moisture intrusion', ['Visible Mold','Moisture Staining','None Observed',OTHER]),
+      item('Underground storage tanks (USTs)', ['Petroleum','Unknown Product','None Observed',OTHER]),
+      item('Radon', ['Tested – Pass','Tested – Elevated','Not Tested',OTHER]),
+      item('Hazardous material storage', ['Chemical Storage','Fuel Storage','None Observed',OTHER]),
+      item('Aboveground storage tanks (ASTs)', ['Petroleum','Chemical','Unknown Product','None Observed',OTHER]),
+      item('Wells / monitoring wells', ['Water Supply Well','Monitoring Well','Abandoned Well','None Observed',OTHER]),
+      item('Septic system', ['Conventional','Aerobic','Cesspool','None Observed',OTHER]),
+      item('Grease traps / interceptors', ['In-Ground Interceptor','Under-Sink Trap','None Observed',OTHER]),
+      item('Floor drains', ['Sanitary-Connected','Storm-Connected','Unknown Connection','None Observed',OTHER]),
+      item('Wastewater treatment plant / system', ['On-Site Treatment Plant','Package Plant','None Observed',OTHER]),
+    ]},
+    { id:'ada', name:'ADA / Accessibility', items:[
+      item('Accessible parking & routes', ['Compliant','Non-Compliant',OTHER]),
+      item('Restroom accessibility', ['Compliant','Non-Compliant',OTHER]),
+      item('Signage & wayfinding', ['Compliant','Non-Compliant',OTHER]),
+    ]},
+  ];
+}
+
+function buildDefaultGeneral(){
+  return { buildings:'', stories:'', weather:'', temperature:'', escortName:'', escortYears:'', escortPosition:'', overallCondition:null };
+}
+
+// ---- Multi-date storage (in-memory for this session) ----
+const inspections = {}; // 'YYYY-MM-DD' -> [ { id, meta:{address,client,inspector}, general:{...}, sections:[...] }, ... ]
+let currentDateStr = null;
+let currentInspectionId = null;
+let SECTIONS = [];
+let GENERAL = null;
+let state = {};
+let observer = null;
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+function makeId(){ return Math.random().toString(36).slice(2,10); }
+
+// ---- Save / load (persists across visits using this browser's artifact storage) ----
+function debounce(fn, wait){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+function showSaveStatus(text){
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+async function saveCurrentInspection(){
+  if(!currentDateStr || !currentInspectionId) return;
+  const insp = (inspections[currentDateStr] || []).find(i => i.id === currentInspectionId);
+  if(!insp) return;
+  try{
+    localStorage.setItem(`insp:${currentDateStr}:${insp.id}`, JSON.stringify({meta: insp.meta, general: insp.general, sections: insp.sections}));
+    showSaveStatus('Saved ✓');
+  }catch(e){
+    console.error('Save failed', e);
+    showSaveStatus('Save failed');
+  }
+}
+const debouncedSave = debounce(saveCurrentInspection, 700);
+
+async function loadAllInspections(){
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const key = localStorage.key(i);
+      if(!key || !key.startsWith('insp:')) continue;
+      const raw = localStorage.getItem(key);
+      if(!raw) continue;
+      const bits = key.split(':'); // insp:YYYY-MM-DD:id
+      const ds = bits[1], id = bits[2];
+      const data = JSON.parse(raw);
+      if(!inspections[ds]) inspections[ds] = [];
+      inspections[ds].push({ id, meta: data.meta, general: data.general || buildDefaultGeneral(), sections: data.sections });
+    }
+  }catch(e){
+    console.error('Could not load saved inspections', e);
+  }
+  renderCalendar();
+}
+
+// ================= CALENDAR =================
+const today = new Date();
+let calYear = today.getFullYear();
+let calMonth = today.getMonth();
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar(){
+  document.getElementById('calTitle').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+  const firstDow = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  let cells = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<firstDow;i++){ cells += `<div class="cal-day empty"></div>`; }
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = dateKey(calYear, calMonth, d);
+    const list = inspections[ds] || [];
+    let dot = '', badge = '';
+    if(list.length){
+      const hasPoor = list.some(insp => insp.sections.some(s => s.items.some(it => it.condition==='poor')));
+      dot = `<div class="dot ${hasPoor?'poor':''}"></div>`;
+      if(list.length > 1) badge = `<span class="badge">${list.length}</span>`;
+    }
+    cells += `<div class="cal-day ${ds===todayKey?'today':''} ${list.length?'has-data':''}" onclick="openDay('${ds}')">
+      ${badge}<span class="num">${d}</span>${dot}
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+}
+function calPrev(){ calMonth--; if(calMonth<0){calMonth=11; calYear--;} renderCalendar(); }
+function calNext(){ calMonth++; if(calMonth>11){calMonth=0; calYear++;} renderCalendar(); }
+function calToday(){ calYear = today.getFullYear(); calMonth = today.getMonth(); renderCalendar(); }
+
+function showView(v){
+  document.getElementById('calendarView').style.display = v==='calendar' ? 'block' : 'none';
+  document.getElementById('dayView').style.display = v==='day' ? 'block' : 'none';
+  document.getElementById('appView').style.display = v==='app' ? 'grid' : 'none';
+}
+
+// ================= DAY VIEW (list of inspections for one date) =================
+function openDay(ds){
+  currentDateStr = ds;
+  renderDayView(ds);
+  showView('day');
+}
+
+function renderDayView(ds){
+  const [y,m,d] = ds.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  document.getElementById('dayTitle').textContent = dt.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+
+  const list = inspections[ds] || [];
+  const listEl = document.getElementById('dayList');
+  if(!list.length){
+    listEl.innerHTML = `<p class="day-empty">No inspections logged for this date yet.</p>`;
+    return;
+  }
+  listEl.innerHTML = list.map(insp => {
+    let total=0, done=0, poor=0;
+    insp.sections.forEach(s => s.items.forEach(it => {
+      total++;
+      if(it.condition){ done++; }
+      if(it.condition==='poor') poor++;
+    }));
+    const pct = total ? Math.round(done/total*100) : 0;
+    const title = insp.meta.address || 'Untitled inspection';
+    const sub = [insp.meta.client, `${pct}% complete`, poor ? `${poor} Poor` : null].filter(Boolean).join(' · ');
+    return `<div class="day-card ${poor?'has-poor':''}" onclick="openInspection('${ds}','${insp.id}')">
+      <div class="dc-title">${title}</div>
+      <div class="dc-sub">${sub}</div>
+    </div>`;
+  }).join('');
+}
+
+function createInspection(){
+  const ds = currentDateStr;
+  if(!inspections[ds]) inspections[ds] = [];
+  const insp = { id: makeId(), meta:{address:'',client:'',inspector:''}, general: buildDefaultGeneral(), sections: buildDefaultSections() };
+  inspections[ds].push(insp);
+  openInspection(ds, insp.id);
+}
+
+function backToDay(){
+  renderDayView(currentDateStr);
+  showView('day');
+}
+function backToCalendar(){ showView('calendar'); renderCalendar(); }
+
+// ================= INSPECTOR =================
+function openInspection(ds, id){
+  currentDateStr = ds;
+  currentInspectionId = id;
+  const insp = (inspections[ds] || []).find(i => i.id === id);
+  if(!insp) return;
+  if(!insp.general) insp.general = buildDefaultGeneral();
+
+  SECTIONS = insp.sections;
+  GENERAL = insp.general;
+  state = {};
+  SECTIONS.forEach(s => state[s.id] = s.items);
+
+  const [y,m,d] = ds.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  document.getElementById('dateLabel').textContent = dt.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric', year:'numeric'});
+
+  document.getElementById('f-address').value = insp.meta.address;
+  document.getElementById('f-client').value = insp.meta.client;
+  document.getElementById('f-inspector').value = insp.meta.inspector;
+
+  showView('app');
+  renderSections();
+  buildRail();
+  updateStats();
+  renderSummary();
+  initObserver();
+  window.scrollTo(0,0);
+}
+
+function setMeta(key, val){
+  if(!currentDateStr || !currentInspectionId) return;
+  const insp = (inspections[currentDateStr] || []).find(i => i.id === currentInspectionId);
+  if(insp) insp.meta[key] = val;
+  debouncedSave();
+}
+
+const WEATHER_OPTIONS = ['Sunny','Cloudy','Overcast','Rainy'];
+
+function generalSectionHtml(){
+  return `
+    <section class="section" id="sec-general">
+      <div class="section-head">
+        <span class="num mono">00</span>
+        <h2>General Information</h2>
+      </div>
+      <div id="generalBody">${generalBodyHtml()}</div>
+    </section>
+  `;
+}
+
+function generalBodyHtml(){
+  const weatherChips = WEATHER_OPTIONS.map(opt =>
+    `<span class="type-chip ${GENERAL.weather===opt?'selected':''}" onclick="toggleWeather('${opt}')">${opt}</span>`
+  ).join('');
+  const condPill = (val,label) =>
+    `<span class="pill sel-${val} ${GENERAL.overallCondition===val?'on':''}" onclick="setOverallCondition('${val}')">${label}</span>`;
+  return `
+    <div class="item" style="border-left-color:var(--na)">
+      <div class="general-grid">
+        <div class="gi-field"><span class="field-label">Buildings on site</span><input type="text" value="${GENERAL.buildings}" placeholder="e.g. 3" oninput="setGeneral('buildings',this.value)"></div>
+        <div class="gi-field"><span class="field-label">Stories</span><input type="text" value="${GENERAL.stories}" placeholder="e.g. 2" oninput="setGeneral('stories',this.value)"></div>
+        <div class="gi-field"><span class="field-label">Temperature</span><input type="text" value="${GENERAL.temperature}" placeholder="e.g. 72°F" oninput="setGeneral('temperature',this.value)"></div>
+      </div>
+      <div class="gi-field" style="margin-top:14px;">
+        <span class="field-label">Weather conditions</span>
+        <div class="type-chips">${weatherChips}</div>
+      </div>
+      <div class="general-grid" style="margin-top:14px;">
+        <div class="gi-field"><span class="field-label">Site escort name</span><input type="text" value="${GENERAL.escortName}" placeholder="Full name" oninput="setGeneral('escortName',this.value)"></div>
+        <div class="gi-field"><span class="field-label">Years associated with property</span><input type="text" value="${GENERAL.escortYears}" placeholder="e.g. 5" oninput="setGeneral('escortYears',this.value)"></div>
+        <div class="gi-field"><span class="field-label">Site escort position</span><input type="text" value="${GENERAL.escortPosition}" placeholder="e.g. Facilities Manager" oninput="setGeneral('escortPosition',this.value)"></div>
+      </div>
+      <div style="margin-top:14px;">
+        <span class="field-label">Overall condition of the property</span>
+        <div class="pills">
+          ${condPill('good','Good')}${condPill('fair','Fair')}${condPill('poor','Poor')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setGeneral(key, val){
+  if(!GENERAL) return;
+  GENERAL[key] = val;
+  debouncedSave();
+}
+function toggleWeather(val){
+  if(!GENERAL) return;
+  GENERAL.weather = GENERAL.weather === val ? '' : val;
+  document.getElementById('generalBody').innerHTML = generalBodyHtml();
+  debouncedSave();
+}
+function setOverallCondition(val){
+  if(!GENERAL) return;
+  GENERAL.overallCondition = GENERAL.overallCondition === val ? null : val;
+  document.getElementById('generalBody').innerHTML = generalBodyHtml();
+  debouncedSave();
+}
+
+function renderSections(){
+  const mainEl = document.getElementById('main');
+  mainEl.innerHTML = generalSectionHtml() + SECTIONS.map((s, si) => `
+    <section class="section" id="sec-${s.id}">
+      <div class="section-head">
+        <span class="num mono">${String(si+1).padStart(2,'0')}</span>
+        <h2>${s.name}</h2>
+        <span class="section-count mono" id="count-${s.id}"></span>
+      </div>
+      <div id="items-${s.id}"></div>
+      <div class="add-row">
+        <input type="text" id="newitem-${s.id}" placeholder="Add an item to inspect…">
+        <button onclick="addItem('${s.id}')">Add Item</button>
+      </div>
+    </section>
+  `).join('');
+  SECTIONS.forEach(s => renderItems(s.id));
+}
+
+function typeFieldHtml(sectionId, idx, it){
+  if(!it.typeOptions.length) return '';
+  const chips = it.typeOptions.map(opt => {
+    const on = it.types.includes(opt);
+    return `<span class="type-chip ${on?'selected':''}" onclick="toggleType('${sectionId}',${idx},'${opt.replace(/'/g,"\\'")}')">${opt}</span>`;
+  }).join('');
+  const customRow = it.types.includes(OTHER)
+    ? `<div class="type-custom-row"><input type="text" placeholder="Type your own…" value="${it.typeCustom}" oninput="setTypeCustom('${sectionId}',${idx},this.value)"></div>`
+    : '';
+  return `<div class="type-chips">${chips}</div>${customRow}`;
+}
+
+function renderItems(sectionId){
+  const container = document.getElementById(`items-${sectionId}`);
+  const items = state[sectionId];
+  container.innerHTML = items.map((it, idx) => {
+    const cls = it.condition ? it.condition : '';
+    return `
+    <div class="item ${cls}">
+      <div class="item-top">
+        <div class="item-name">${it.name}</div>
+        <div class="pills">
+          <span class="pill sel-good ${it.condition==='good'?'on':''}" onclick="setCondition('${sectionId}',${idx},'good')">Good</span>
+          <span class="pill sel-fair ${it.condition==='fair'?'on':''}" onclick="setCondition('${sectionId}',${idx},'fair')">Fair</span>
+          <span class="pill sel-poor ${it.condition==='poor'?'on':''}" onclick="setCondition('${sectionId}',${idx},'poor')">Poor</span>
+          <span class="pill sel-na ${it.condition==='na'?'on':''}" onclick="setCondition('${sectionId}',${idx},'na')">N/A</span>
+        </div>
+      </div>
+      ${it.typeOptions.length ? `<div class="type-field">
+        <span class="field-label">Type</span>
+        ${typeFieldHtml(sectionId, idx, it)}
+      </div>` : ''}
+      <div class="item-detail">
+        <span class="field-label">Note</span>
+        <textarea placeholder="Note (optional)" oninput="setNote('${sectionId}',${idx},this.value)">${it.note}</textarea>
+      </div>
+      <div class="item-bottom-row">
+        <label class="photo-btn">
+          + Photo
+          <input type="file" accept="image/*" multiple style="display:none" onchange="addPhotos('${sectionId}',${idx},this.files)">
+        </label>
+      </div>
+      ${it.photos.length ? `<div class="thumbs">${it.photos.map(p=>`<img src="${p}">`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById(`count-${sectionId}`).textContent =
+    `${items.filter(i=>i.condition).length}/${items.length} logged`;
+}
+
+function setCondition(sectionId, idx, cond){
+  const it = state[sectionId][idx];
+  it.condition = it.condition === cond ? null : cond;
+  renderItems(sectionId);
+  updateStats();
+  renderSummary();
+  debouncedSave();
+}
+function toggleType(sectionId, idx, val){
+  const it = state[sectionId][idx];
+  const pos = it.types.indexOf(val);
+  if(pos === -1){ it.types.push(val); }
+  else { it.types.splice(pos,1); if(val===OTHER) it.typeCustom=''; }
+  renderItems(sectionId);
+  renderSummary();
+  debouncedSave();
+}
+function setTypeCustom(sectionId, idx, val){
+  state[sectionId][idx].typeCustom = val;
+  renderSummary();
+  debouncedSave();
+}
+function setNote(sectionId, idx, val){
+  state[sectionId][idx].note = val;
+  renderSummary();
+  debouncedSave();
+}
+function addPhotos(sectionId, idx, files){
+  const it = state[sectionId][idx];
+  [...files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => { it.photos.push(e.target.result); renderItems(sectionId); debouncedSave(); };
+    reader.readAsDataURL(file);
+  });
+}
+function addItem(sectionId){
+  const input = document.getElementById(`newitem-${sectionId}`);
+  const val = input.value.trim();
+  if(!val) return;
+  state[sectionId].push(item(val, [OTHER]));
+  input.value = '';
+  renderItems(sectionId);
+  updateStats();
+  debouncedSave();
+}
+
+function slug(str){
+  return str.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '-' + Math.random().toString(36).slice(2,6);
+}
+function addSection(){
+  const input = document.getElementById('newSectionInput');
+  const name = input.value.trim();
+  if(!name) return;
+  const id = slug(name);
+  const sec = { id, name, items: [] };
+  SECTIONS.push(sec);
+  state[id] = sec.items;
+  input.value = '';
+  renderSections();
+  buildRail();
+  initObserver();
+  updateStats();
+  addItem(id);
+  document.getElementById(`sec-${id}`).scrollIntoView({behavior:'smooth'});
+  debouncedSave();
+}
+
+function updateStats(){
+  let total=0, done=0, good=0, fair=0, poor=0;
+  Object.values(state).forEach(items => items.forEach(it => {
+    total++;
+    if(it.condition){ done++; }
+    if(it.condition==='good') good++;
+    if(it.condition==='fair') fair++;
+    if(it.condition==='poor') poor++;
+  }));
+  document.getElementById('stat-complete').textContent = total ? Math.round(done/total*100)+'%' : '0%';
+  document.getElementById('stat-good').textContent = good;
+  document.getElementById('stat-fair').textContent = fair;
+  document.getElementById('stat-poor').textContent = poor;
+}
+
+function renderSummary(){
+  const flags = [];
+  SECTIONS.forEach(s => state[s.id].forEach(it => {
+    if(it.condition==='poor' || it.condition==='fair'){
+      flags.push({section:s.name, ...it});
+    }
+  }));
+  const el = document.getElementById('flagList');
+  if(!flags.length){
+    el.innerHTML = `<p class="empty-flags">No Fair or Poor items logged yet — flagged items will appear here automatically.</p>`;
+    return;
+  }
+  el.innerHTML = flags.map(f => {
+    const labels = f.types.map(t => t===OTHER ? (f.typeCustom||'Other') : t);
+    const typeLabel = labels.join(', ');
+    return `
+    <div class="flag ${f.condition}">
+      <div class="flag-section">${f.section} · ${f.condition==='poor'?'Poor':'Fair'}</div>
+      <div class="flag-name">${f.name}</div>
+      ${typeLabel ? `<div class="flag-type">${typeLabel}</div>` : ''}
+      ${f.note ? `<div class="flag-note">${f.note}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function emailReport(){
+  const meta = (inspections[currentDateStr] || []).find(i => i.id === currentInspectionId)?.meta || {};
+  const dateLabel = document.getElementById('dateLabel').textContent;
+
+  let total=0, done=0, good=0, fair=0, poor=0;
+  SECTIONS.forEach(s => state[s.id].forEach(it => {
+    total++;
+    if(it.condition) done++;
+    if(it.condition==='good') good++;
+    if(it.condition==='fair') fair++;
+    if(it.condition==='poor') poor++;
+  }));
+
+  let body = `PROPERTY INSPECTION REPORT\n`;
+  body += `Date: ${dateLabel}\n`;
+  if(meta.address) body += `Address: ${meta.address}\n`;
+  if(meta.client) body += `Client: ${meta.client}\n`;
+  if(meta.inspector) body += `Inspector: ${meta.inspector}\n`;
+  body += `\nCompletion: ${total ? Math.round(done/total*100) : 0}%  (Good: ${good}  Fair: ${fair}  Poor: ${poor})\n`;
+
+  if(GENERAL){
+    body += `\n--- GENERAL INFORMATION ---\n`;
+    if(GENERAL.buildings) body += `Buildings on site: ${GENERAL.buildings}\n`;
+    if(GENERAL.stories) body += `Stories: ${GENERAL.stories}\n`;
+    if(GENERAL.weather) body += `Weather: ${GENERAL.weather}\n`;
+    if(GENERAL.temperature) body += `Temperature: ${GENERAL.temperature}\n`;
+    if(GENERAL.escortName) body += `Site escort: ${GENERAL.escortName}${GENERAL.escortPosition ? ' — ' + GENERAL.escortPosition : ''}\n`;
+    if(GENERAL.escortYears) body += `Escort years associated with property: ${GENERAL.escortYears}\n`;
+    if(GENERAL.overallCondition) body += `Overall condition of property: ${GENERAL.overallCondition.toUpperCase()}\n`;
+  }
+
+  body += `\n--- FLAGGED ITEMS (Fair / Poor) ---\n`;
+  const flags = [];
+  SECTIONS.forEach(s => state[s.id].forEach(it => {
+    if(it.condition==='poor' || it.condition==='fair') flags.push({section:s.name, ...it});
+  }));
+  if(!flags.length){
+    body += `None logged.\n`;
+  }else{
+    flags.forEach(f => {
+      const labels = f.types.map(t => t===OTHER ? (f.typeCustom||'Other') : t).join(', ');
+      body += `\n[${f.condition.toUpperCase()}] ${f.section} — ${f.name}`;
+      if(labels) body += ` (${labels})`;
+      if(f.note) body += `\n  Note: ${f.note}`;
+      body += `\n`;
+    });
+  }
+  body += `\nFull details, photos, and the complete checklist are in the printed/PDF report — attach that file to this email if needed.`;
+
+  const subject = `Inspection Report — ${meta.address || dateLabel}`;
+  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+}
+
+function saveAsPDF(){
+  const btn = document.getElementById('pdfBtn');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Generating…';
+  btn.disabled = true;
+
+  // Let the UI repaint before the (synchronous, potentially heavy) PDF build runs
+  setTimeout(() => {
+    try{
+      buildPDF();
+    }catch(e){
+      console.error('PDF generation failed', e);
+      alert('Something went wrong generating the PDF. Please try again.');
+    }
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }, 50);
+}
+
+function buildPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 42;
+  const contentW = pageW - margin*2;
+  let y = margin;
+
+  const INK = [27,36,48], TAPE = [184,128,31], GOOD=[76,122,99], FAIR=[201,138,59], POOR=[184,76,62], DIM=[120,120,110], TXT=[38,36,29];
+
+  function newPageIfNeeded(h){
+    if(y + h > pageH - margin){
+      doc.addPage();
+      y = margin;
+    }
+  }
+  function rule(){
+    doc.setDrawColor(210,205,190);
+    doc.setLineWidth(0.75);
+    doc.line(margin, y, pageW-margin, y);
+    y += 14;
+  }
+  function heading(text){
+    newPageIfNeeded(30);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...INK);
+    doc.text(text, margin, y);
+    y += 8;
+    rule();
+  }
+  function label(text){
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...DIM);
+    doc.text(text.toUpperCase(), margin, y);
+    y += 12;
+  }
+  function bodyText(text, size, color, indent){
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...(color||TXT));
+    const lines = doc.splitTextToSize(text, contentW - (indent||0));
+    newPageIfNeeded(lines.length * (size+3));
+    doc.text(lines, margin + (indent||0), y);
+    y += lines.length * (size+3) + 4;
+  }
+
+  // ---- Cover / property info ----
+  const meta = (inspections[currentDateStr] || []).find(i => i.id === currentInspectionId)?.meta || {};
+  const dateLabel = document.getElementById('dateLabel').textContent;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...INK);
+  doc.text('Property Inspection Report', margin, y);
+  y += 26;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...TXT);
+  const infoLines = [
+    `Date: ${dateLabel}`,
+    meta.address ? `Address: ${meta.address}` : null,
+    meta.client ? `Client: ${meta.client}` : null,
+    meta.inspector ? `Inspector: ${meta.inspector}` : null,
+  ].filter(Boolean);
+  infoLines.forEach(line => { doc.text(line, margin, y); y += 15; });
+  y += 6;
+
+  let total=0, done=0, good=0, fair=0, poor=0;
+  SECTIONS.forEach(s => state[s.id].forEach(it => {
+    total++;
+    if(it.condition) done++;
+    if(it.condition==='good') good++;
+    if(it.condition==='fair') fair++;
+    if(it.condition==='poor') poor++;
+  }));
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...GOOD); doc.text(`Good: ${good}`, margin, y);
+  doc.setTextColor(...FAIR); doc.text(`Fair: ${fair}`, margin+90, y);
+  doc.setTextColor(...POOR); doc.text(`Poor: ${poor}`, margin+170, y);
+  doc.setTextColor(...INK); doc.text(`Complete: ${total?Math.round(done/total*100):0}%`, margin+250, y);
+  y += 20;
+
+  // ---- General Information ----
+  if(GENERAL){
+    heading('General Information');
+    const g1 = [
+      GENERAL.buildings ? `Buildings on site: ${GENERAL.buildings}` : null,
+      GENERAL.stories ? `Stories: ${GENERAL.stories}` : null,
+      GENERAL.weather ? `Weather: ${GENERAL.weather}` : null,
+      GENERAL.temperature ? `Temperature: ${GENERAL.temperature}` : null,
+    ].filter(Boolean);
+    const g2 = [
+      GENERAL.escortName ? `Site escort: ${GENERAL.escortName}` : null,
+      GENERAL.escortPosition ? `Position: ${GENERAL.escortPosition}` : null,
+      GENERAL.escortYears ? `Years associated with property: ${GENERAL.escortYears}` : null,
+      GENERAL.overallCondition ? `Overall condition of property: ${GENERAL.overallCondition.toUpperCase()}` : null,
+    ].filter(Boolean);
+    [...g1, ...g2].forEach(line => { bodyText(line, 10, TXT); });
+    y += 6;
+  }
+
+  // ---- Sections ----
+  SECTIONS.forEach(s => {
+    const items = state[s.id];
+    if(!items.length) return;
+    heading(s.name);
+
+    items.forEach(it => {
+      newPageIfNeeded(40);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...TXT);
+      doc.text(it.name, margin, y);
+
+      const condColor = it.condition==='good'?GOOD : it.condition==='fair'?FAIR : it.condition==='poor'?POOR : DIM;
+      const condLabel = it.condition ? it.condition.toUpperCase() : 'NOT LOGGED';
+      doc.setFontSize(9);
+      doc.setTextColor(...condColor);
+      doc.text(condLabel, pageW - margin - doc.getTextWidth(condLabel), y);
+      y += 14;
+
+      const typeLabels = it.types.map(t => t===OTHER ? (it.typeCustom||'Other') : t).join(', ');
+      if(typeLabels) bodyText(`Type: ${typeLabels}`, 9.5, DIM, 8);
+      if(it.note) bodyText(it.note, 9.5, TXT, 8);
+
+      if(it.photos.length){
+        const thumb = 54, gap = 6;
+        let x = margin + 8;
+        newPageIfNeeded(thumb + 8);
+        it.photos.forEach(p => {
+          if(x + thumb > pageW - margin){ x = margin + 8; y += thumb + gap; newPageIfNeeded(thumb+8); }
+          try{ doc.addImage(p, 'JPEG', x, y, thumb, thumb); }catch(e){ /* skip unreadable image */ }
+          x += thumb + gap;
+        });
+        y += thumb + 10;
+      }
+      y += 6;
+    });
+    y += 4;
+  });
+
+  // ---- Summary of flagged items ----
+  const flags = [];
+  SECTIONS.forEach(s => state[s.id].forEach(it => {
+    if(it.condition==='poor' || it.condition==='fair') flags.push({section:s.name, ...it});
+  }));
+  doc.addPage();
+  y = margin;
+  heading('Summary of Findings');
+  if(!flags.length){
+    bodyText('No Fair or Poor items logged.', 10, DIM);
+  }else{
+    flags.forEach(f => {
+      newPageIfNeeded(30);
+      const labels = f.types.map(t => t===OTHER ? (f.typeCustom||'Other') : t).join(', ');
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...(f.condition==='poor'?POOR:FAIR));
+      doc.text(`[${f.condition.toUpperCase()}] ${f.section} — ${f.name}`, margin, y);
+      y += 13;
+      if(labels) bodyText(labels, 9, DIM, 8);
+      if(f.note) bodyText(f.note, 9, TXT, 8);
+      y += 4;
+    });
+  }
+
+  const fname = `inspection-${currentDateStr}-${(meta.address||'report').replace(/[^a-z0-9]+/gi,'-').toLowerCase()}.pdf`;
+  doc.save(fname);
+}
+
+function buildRail(){
+  const railInner = document.getElementById('railInner');
+  const ids = ['general', ...SECTIONS.map(s => s.id)];
+  const names = ['General Info', ...SECTIONS.map(s => s.name)];
+  const n = ids.length;
+  railInner.innerHTML = ids.map((id, i) => {
+    const topPct = (i / n) * 100;
+    return `<div class="tick major" id="tick-${id}" style="top:${topPct}%" onclick="document.getElementById('sec-${id}').scrollIntoView({behavior:'smooth'})">
+      <div class="mark"></div><div class="tick-num">${names[i].toUpperCase()}</div>
+    </div>`;
+  }).join('');
+}
+
+function initObserver(){
+  if(observer) observer.disconnect();
+  const opts = { rootMargin: '-15% 0px -70% 0px', threshold: 0 };
+  observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        const id = e.target.id.replace('sec-','');
+        document.querySelectorAll('.tick').forEach(t => t.classList.remove('active'));
+        const tick = document.getElementById(`tick-${id}`);
+        if(tick) tick.classList.add('active');
+      }
+    });
+  }, opts);
+  const ids = ['general', ...SECTIONS.map(s => s.id)];
+  ids.forEach(id => {
+    const el = document.getElementById(`sec-${id}`);
+    if(el) observer.observe(el);
+  });
+}
+
+loadAllInspections();
+</script>
+</body>
+</html>
